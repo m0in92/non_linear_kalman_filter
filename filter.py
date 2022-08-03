@@ -29,6 +29,10 @@ class BaseKF:
         self.u = u
         self.y_actual = y_actual
 
+    @staticmethod
+    def cov_est(L_k, X_cov, y_cov):
+        return X_cov - L_k @ y_cov @ L_k.transpose()
+
 
 class EKF(BaseKF):
     def __init__(self, f_k, h_k, A_hat, B_hat, C_hat, D_hat, X, W, V, u, y_actual):
@@ -57,10 +61,6 @@ class EKF(BaseKF):
         L_k = X_cov @ C_hat @ y_conv_inv
         return L_k, y_cov
 
-    @staticmethod
-    def cov_est(L_k, X_cov, y_cov):
-        return X_cov - L_k @ y_cov @ L_k.transpose()
-
     def calc(self):
         X_estimates = np.zeros((self.X.length, len(self.u) - 1))
         X_covariances = np.zeros((self.X.length, self.X.length, len(self.u) - 1))
@@ -85,7 +85,7 @@ class EKF(BaseKF):
             L_k, Y_cov = self.kalman_gain(C_hat, D_hat, self.X.covariance, self.V.covariance)
             # Step 2b: State-estimate
             y_tilde = (self.y_actual[i-1] - y_pred).reshape(-1, 1)
-            self.X.mean = self.X.mean + np.matmul(L_k, y_tilde)
+            self.X.mean = self.X.mean + L_k @ y_tilde
             # Step 2c: State covariance estimate
             self.X.covariance = self.cov_est(L_k, self.X.covariance, Y_cov)
 
@@ -184,11 +184,8 @@ class SPKF(BaseKF):
             # Step 2b: State estimate
             self.X.mean = self.X.mean + np.matmul(L_k, (self.y_actual[i-1] - y_k).reshape(-1,1))
             # Step 2c: Covariance estimate
-            self.X.covariance = self.X.covariance - np.matmul(np.matmul(L_k, y_cov), L_k.transpose())
-            # _,S,V = np.linalg.svd(self.X.covariance)
-            # HH = V @ S @ V
-            # self.X.covariance = (self.X.covariance + self.X.covariance.transpose() + HH + HH.transpose())/4
-            # print(i)
+            self.X.covariance = self.cov_est(L_k, self.X.covariance, y_cov)
+
 
             X_estimates[:, i - 1] = self.X.mean.flatten()
             X_covariances[:,:,i - 1] = self.X.covariance
