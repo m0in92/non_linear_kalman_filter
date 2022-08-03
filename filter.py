@@ -166,23 +166,21 @@ class SPKF(BaseKF):
             Xa = self.create_sigma_pts(xa, sSigma_xa)
             X_x, X_w, X_v = Xa[0:self.X.length,:], Xa[self.X.length: self.X.length + self.W.length,:], Xa[self.X.length + self.W.length:,:]
             X_x = self.f_k(X_x, self.u[i-1], X_w)
-            # print(np.matmul(X_x, np.array([self.alpha_m]).transpose()))
-            self.X.mean = np.matmul(X_x, np.array([self.alpha_m]).transpose())
+            self.X.mean = X_x @ np.array([self.alpha_m]).transpose()
             # Step 1b: State covariance prediction
             X_x_tilde = X_x - self.X.mean
-            self.X.covariance = np.matmul(np.matmul(X_x_tilde, np.diag(self.alpha_c)), X_x_tilde.transpose())
+            self.X.covariance = X_x_tilde @ np.diag(self.alpha_c) @ X_x_tilde.transpose()
             # Step 1c: predict output
             Y_k = self.h_k(X_x, self.u[i], X_v)
             y_k = np.matmul(Y_k, self.alpha_c)
 
             # Step 2a: Kalman Gain
             Y_tilde = Y_k - y_k.reshape(-1,1)
-            # print(Y_tilde)
-            y_cov = np.matmul(np.matmul(Y_tilde, np.diag(self.alpha_c)), Y_tilde.transpose())
-            xy_cov = np.matmul(np.matmul(X_x_tilde, np.diag(self.alpha_c)), Y_tilde.transpose())
-            L_k = np.matmul(xy_cov, np.linalg.inv(y_cov))
+            y_cov = Y_tilde @ np.diag(self.alpha_c) @ Y_tilde.transpose()
+            xy_cov = X_x_tilde @ np.diag(self.alpha_c) @ Y_tilde.transpose()
+            L_k = xy_cov @ np.linalg.inv(y_cov)
             # Step 2b: State estimate
-            self.X.mean = self.X.mean + np.matmul(L_k, (self.y_actual[i-1] - y_k).reshape(-1,1))
+            self.X.mean = self.X.mean + L_k @ (self.y_actual[i-1] - y_k).reshape(-1,1)
             # Step 2c: Covariance estimate
             self.X.covariance = self.cov_est(L_k, self.X.covariance, y_cov)
 
