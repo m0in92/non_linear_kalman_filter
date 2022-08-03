@@ -52,22 +52,14 @@ class EKF(BaseKF):
 
     @staticmethod
     def kalman_gain(C_hat, D_hat, X_cov, V_cov):
-        # Equation is X.cov*C_hat.T * inv(C_hat*X.cov*C_hat.T + D_hat*V.cov*D_hat.T)
-
-        C_matmul = np.matmul(np.matmul(C_hat, X_cov), C_hat.transpose())
-        D_matmul = np.matmul(np.matmul(D_hat, V_cov), D_hat.transpose())
-        y_cov = np.add(C_matmul, D_matmul)
-
+        y_cov = C_hat @ X_cov @ C_hat.transpose() + D_hat @ V_cov @ D_hat.transpose()
         y_conv_inv = np.linalg.inv(y_cov.astype(float))
-        L_k = np.matmul(np.matmul(X_cov, C_hat.transpose()), y_conv_inv)
-        # L_k = np.matmul(X_cov, C_hat.transpose()) / y_cov
+        L_k = X_cov @ C_hat @ y_conv_inv
         return L_k, y_cov
 
     @staticmethod
-    def cov_est(L_k, X_cov, Y_cov):
-        first_matmul = np.matmul(L_k, Y_cov)
-        second_matmul = np.matmul(first_matmul, L_k.transpose())
-        return X_cov - second_matmul
+    def cov_est(L_k, X_cov, y_cov):
+        return X_cov - L_k @ y_cov @ L_k.transpose()
 
     def calc(self):
         X_estimates = np.zeros((self.X.length, len(self.u) - 1))
