@@ -48,9 +48,7 @@ class EKF(BaseKF):
 
     @staticmethod
     def cov_pred(A_hat, B_hat, X_cov, W_cov):
-        first_matmul = np.matmul(A_hat, X_cov)
-        second_matmul = np.matmul(B_hat, W_cov)
-        return np.add(np.matmul(first_matmul, A_hat.transpose()), np.matmul(second_matmul, B_hat.transpose()))
+        return A_hat @ X_cov @ A_hat.transpose() + B_hat @ W_cov @ B_hat.transpose()
 
     @staticmethod
     def kalman_gain(C_hat, D_hat, X_cov, V_cov):
